@@ -18,7 +18,7 @@ import {
   faPowerOff,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useSystem, useSystemSettings } from "@/apis/hooks";
+import { useSystem, useSystemJobs, useSystemSettings } from "@/apis/hooks";
 import { Action, Search } from "@/components";
 import { useNavbar } from "@/contexts/Navbar";
 import { useIsOnline } from "@/contexts/Online";
@@ -42,6 +42,12 @@ const AppHeader: FunctionComponent = () => {
     notificationsOpened,
     { open: openNotifications, close: closeNotifications },
   ] = useDisclosure(false);
+
+  const {
+    data: jobs,
+    isLoading: jobsLoading,
+    error: jobsError,
+  } = useSystemJobs();
 
   return (
     <AppShell.Header p="md" className={styles.header}>
@@ -108,15 +114,26 @@ const AppHeader: FunctionComponent = () => {
       <Drawer
         opened={notificationsOpened}
         onClose={closeNotifications}
-        title="Notifications"
+        title="System Jobs"
         position="right"
         size="md"
         overlayProps={{ opacity: 0.35, blur: 2 }}
       >
-        {/* Replace this placeholder content with your notifications list */}
-        <div>
-          <p>No notifications yet.</p>
-        </div>
+        {jobsLoading && <div>Loading jobs…</div>}
+        {!jobsLoading && jobsError && <div>Failed to load jobs.</div>}
+        {!jobsLoading && !jobsError && (
+          <div>
+            {!jobs || (Array.isArray(jobs) && jobs.length === 0) ? (
+              <p>No jobs.</p>
+            ) : (
+              <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {typeof jobs === "string"
+                  ? jobs
+                  : JSON.stringify(jobs, null, 2)}
+              </pre>
+            )}
+          </div>
+        )}
       </Drawer>
     </AppShell.Header>
   );
