@@ -81,6 +81,9 @@ const AppHeader: FunctionComponent = () => {
             tooltip={{ position: "left", openDelay: 2000 }}
             icon={faBell}
             size="lg"
+            loading={Boolean(
+              jobs?.filter((job) => job.status === "running").length,
+            )}
             onClick={openNotifications}
           ></Action>
           <Menu>
