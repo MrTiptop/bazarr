@@ -16,6 +16,10 @@ class SystemJobs(Resource):
         'job_name': fields.String(),
         'status': fields.String(),
         'last_run_time': fields.String(),
+        'is_progress': fields.Boolean(),
+        'progress_value': fields.Integer(),
+        'progress_max': fields.Integer(),
+        'progress_message': fields.String(),
     })
 
     get_request_parser = reqparse.RequestParser()

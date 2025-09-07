@@ -14,6 +14,7 @@ from subtitles.indexer.series import store_subtitles, series_full_scan_subtitles
 from subtitles.mass_download import episode_download_subtitles
 from app.event_handler import event_stream
 from sonarr.info import get_sonarr_info
+from app.jobs_queue import jobs_queue
 
 from .parser import episodeParser
 from .utils import get_episodes_from_sonarr_api, get_episodesFiles_from_sonarr_api
@@ -39,11 +40,11 @@ def get_episodes_monitored_table(series_id):
 
 
 def update_all_episodes():
-    series_full_scan_subtitles()
-    logging.info('BAZARR All existing episode subtitles indexed from disk.')
+    jobs_queue.feed_jobs_pending_queue("Full disk scan...", "subtitles.indexer.series", "series_full_scan_subtitles",
+                                       is_progress=True)
 
 
-def sync_episodes(series_id, send_event=True, defer_search=False):
+def sync_episodes(series_id, send_event=True, defer_search=False, **kwargs):
     logging.debug(f'BAZARR Starting episodes sync from Sonarr for series ID {series_id}.')
     apikey_sonarr = settings.sonarr.apikey
 
@@ -199,7 +200,7 @@ def sync_episodes(series_id, send_event=True, defer_search=False):
     logging.debug(f'BAZARR All episodes from series ID {series_id} synced from Sonarr into database.')
 
 
-def sync_one_episode(episode_id, defer_search=False):
+def sync_one_episode(episode_id, defer_search=False, **kwargs):
     logging.debug(f'BAZARR syncing this specific episode from Sonarr: {episode_id}')
     apikey_sonarr = settings.sonarr.apikey
 

@@ -17,6 +17,7 @@ from utilities.path_mappings import path_mappings
 from utilities.video_analyzer import embedded_subs_reader
 from app.event_handler import event_stream, show_progress, hide_progress
 from subtitles.indexer.utils import guess_external_subtitles, get_external_subtitles_path
+from app.jobs_queue import jobs_queue
 
 gc.enable()
 
@@ -277,7 +278,7 @@ def list_missing_subtitles_movies(no=None, send_event=True):
         event_stream(type='badges')
 
 
-def movies_full_scan_subtitles(use_cache=None):
+def movies_full_scan_subtitles(job_id=None, use_cache=None):
     if use_cache is None:
         use_cache = settings.radarr.use_ffprobe_cache
 
@@ -285,20 +286,12 @@ def movies_full_scan_subtitles(use_cache=None):
         select(TableMovies.path))\
         .all()
 
-    count_movies = len(movies)
-    for i, movie in enumerate(movies):
-        show_progress(id='movies_disk_scan',
-                      header='Full disk scan...',
-                      name='Movies subtitles',
-                      value=i,
-                      count=count_movies)
+    jobs_queue.update_job_progress(job_id=job_id, progress_max=len(movies), progress_message='Movies subtitles')
+    for i, movie in enumerate(movies, start=1):
+        jobs_queue.update_job_progress(job_id=job_id, progress_value=i)
         store_subtitles_movie(movie.path, path_mappings.path_replace_movie(movie.path), use_cache=use_cache)
 
-    show_progress(id='movies_disk_scan',
-                  header='Full disk scan...',
-                  name='Movies subtitles',
-                  value=count_movies,
-                  count=count_movies)
+    logging.info('BAZARR All existing movie subtitles indexed from disk.')
 
     gc.collect()
 

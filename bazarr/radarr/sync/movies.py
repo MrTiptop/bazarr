@@ -14,6 +14,7 @@ from radarr.rootfolder import check_radarr_rootfolder
 from subtitles.mass_download import movies_download_subtitles
 from app.database import TableMovies, TableLanguagesProfiles, database, insert, update, delete, select
 from app.event_handler import event_stream, show_progress, hide_progress
+from app.jobs_queue import jobs_queue
 
 from .utils import get_profile_list, get_tags, get_movies_from_radarr_api
 from .parser import movieParser
@@ -35,8 +36,8 @@ def get_language_profiles():
 
 
 def update_all_movies():
-    movies_full_scan_subtitles()
-    logging.info('BAZARR All existing movie subtitles indexed from disk.')
+    jobs_queue.feed_jobs_pending_queue("Full disk scan...", "subtitles.indexer.movies", "movies_full_scan_subtitles",
+                                       is_progress=True)
 
 
 def get_movie_file_size_from_db(movie_path):
@@ -225,7 +226,7 @@ def update_movies(send_event=True):
             logging.debug('BAZARR All movies synced from Radarr into database.')
 
 
-def update_one_movie(movie_id, action, defer_search=False):
+def update_one_movie(movie_id, action, defer_search=False, **kwargs):
     logging.debug(f'BAZARR syncing this specific movie from Radarr: {movie_id}')
 
     # Check if there's a row in database for this movie ID

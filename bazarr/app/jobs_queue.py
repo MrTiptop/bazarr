@@ -35,8 +35,17 @@ class Job:
     :type status: str
     :ivar last_run_time: Last time the job was run, initialized to None.
     :type last_run_time: datetime
+    :ivar is_progress: Indicates whether the job is a progress job, defaults to False.
+    :type is_progress: bool
+    :ivar progress_value: Actual value of the job's progress, initialized to 0.
+    :type progress_value: int
+    :ivar progress_max: Maximum value of the job's progress, initialized to 0.
+    :type progress_max: int
+    :ivar progress_message: Message shown for this job's progress, initialized to an empty string.
+    :type progress_message: str
     """
-    def __init__(self, job_id: int, job_name: str, module: str, func: str, args: list = None, kwargs: dict = None):
+    def __init__(self, job_id: int, job_name: str, module: str, func: str, args: list = None, kwargs: dict = None,
+                 is_progress=False, progress_max: int = 0):
         self.job_id = job_id
         self.job_name = job_name
         self.module = module
@@ -45,6 +54,10 @@ class Job:
         self.kwargs = kwargs
         self.status = 'pending'
         self.last_run_time = datetime.now()
+        self.is_progress = is_progress
+        self.progress_value = 0
+        self.progress_max = progress_max
+        self.progress_message = ""
 
 
 class JobsQueue:
@@ -76,7 +89,8 @@ class JobsQueue:
         self.jobs_completed_queue = deque(maxlen=10)
         self.current_job_id = 0
 
-    def feed_jobs_pending_queue(self, job_name, module, func, args: list = None, kwargs: dict = None):
+    def feed_jobs_pending_queue(self, job_name, module, func, args: list = None, kwargs: dict = None,
+                                is_progress=False, progress_max: int = 0,):
         """
         Adds a new job to the pending jobs queue with specified details and triggers an event
         to notify about the queue update. Each job is uniquely identified by a job ID,
@@ -93,6 +107,10 @@ class JobsQueue:
         :type args: list
         :param kwargs: Dictionary of keyword arguments to be passed to the function.
         :type kwargs: dict
+        :param is_progress: Indicates whether the job is a progress job, defaults to False.
+        :type is_progress: bool
+        :param progress_max: Maximum value of the job's progress, initialized to 0.
+        :type progress_max: int
         :return: The unique job ID assigned to the newly queued job.
         :rtype: int
         """
@@ -108,7 +126,9 @@ class JobsQueue:
                 module=module,
                 func=func,
                 args=args,
-                kwargs=kwargs,)
+                kwargs=kwargs,
+                is_progress=is_progress,
+                progress_max=progress_max,)
         )
         logging.debug(f"Task {job_name} ({new_job_id}) added to queue")
         event_stream(type='jobs', action='update', payload=new_job_id)
@@ -145,6 +165,35 @@ class JobsQueue:
         else:
             return sorted([vars(job) for job in queues], key=lambda x: x['last_run_time'], reverse=True)
     
+    def update_job_progress(self, job_id: int, progress_value=None, progress_max=None, progress_message: str = ""):
+        """
+        Updates the progress value and message for a specific job within the running jobs queue. The function
+        iterates through a queue of running jobs, identifies the matching job by its ID, and updates its progress
+        value and message. Afterward, triggers an event stream for the updated job.
+
+        :param job_id: The unique identifier of the job to be updated.
+        :type job_id: int
+        :param progress_value: The new progress value to be set for the job.
+        :type progress_value: int
+        :param progress_max: Maximum value of the job's progress.
+        :type progress_max: int
+        :param progress_message: An optional message providing additional details about the current progress.
+        :type progress_message: str
+        :return: Returns True if the job's progress was successfully updated, otherwise False.
+        :rtype: bool
+        """
+        for job in self.jobs_running_queue:
+            if job.job_id == job_id:
+                if progress_value:
+                    job.progress_value = progress_value
+                if progress_max:
+                    job.progress_max = progress_max
+                if progress_message:
+                    job.progress_message = progress_message
+                event_stream(type='jobs', action='update', payload=job.job_id)
+                return True
+        return False
+
     def remove_job_from_pending_queue(self, job_id: int):
         """
         Removes a job from the pending queue based on the provided job ID.
@@ -203,7 +252,7 @@ class JobsQueue:
                         logging.debug(f"Running job {job.job_name} (id {job.job_id}): "
                                       f"{job.module}.{job.func}({job.args}, {job.kwargs})")
                         func_to_call = getattr(importlib.import_module(job.module), job.func)
-                        func_to_call(*job.args, **job.kwargs)
+                        func_to_call(*job.args, **job.kwargs, job_id=job.job_id)
                     except Exception as e:
                         logging.exception(f"Exception raised while running function: {e}")
                         job.status = 'failed'

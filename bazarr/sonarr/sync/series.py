@@ -189,7 +189,7 @@ def update_series(send_event=True):
         logging.debug('BAZARR All series synced from Sonarr into database.')
 
 
-def update_one_series(series_id, action):
+def update_one_series(series_id, action, **kwargs):
     logging.debug(f'BAZARR syncing this specific series from Sonarr: {series_id}')
 
     # Check if there's a row in database for this series ID

@@ -17,6 +17,7 @@ from utilities.path_mappings import path_mappings
 from utilities.video_analyzer import embedded_subs_reader
 from app.event_handler import event_stream, show_progress, hide_progress
 from subtitles.indexer.utils import guess_external_subtitles, get_external_subtitles_path
+from app.jobs_queue import jobs_queue
 
 gc.enable()
 
@@ -283,7 +284,7 @@ def list_missing_subtitles(no=None, epno=None, send_event=True):
         event_stream(type='badges')
 
 
-def series_full_scan_subtitles(use_cache=None):
+def series_full_scan_subtitles(job_id=None, use_cache=None):
     if use_cache is None:
         use_cache = settings.sonarr.use_ffprobe_cache
 
@@ -291,20 +292,12 @@ def series_full_scan_subtitles(use_cache=None):
         select(TableEpisodes.path))\
         .all()
 
-    count_episodes = len(episodes)
-    for i, episode in enumerate(episodes):
-        show_progress(id='episodes_disk_scan',
-                      header='Full disk scan...',
-                      name='Episodes subtitles',
-                      value=i,
-                      count=count_episodes)
+    jobs_queue.update_job_progress(job_id=job_id, progress_max=len(episodes), progress_message='Episodes subtitles')
+    for i, episode in enumerate(episodes, start=1):
+        jobs_queue.update_job_progress(job_id=job_id, progress_value=i)
         store_subtitles(episode.path, path_mappings.path_replace(episode.path), use_cache=use_cache)
 
-    show_progress(id='episodes_disk_scan',
-                  header='Full disk scan...',
-                  name='Episodes subtitles',
-                  value=count_episodes,
-                  count=count_episodes)
+    logging.info('BAZARR All existing episode subtitles indexed from disk.')
 
     gc.collect()
 

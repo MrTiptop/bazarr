@@ -13,6 +13,7 @@ import {
   Group,
   Loader,
   Menu,
+  Progress,
   Stack,
   Text,
 } from "@mantine/core";
@@ -84,9 +85,9 @@ const AppHeader: FunctionComponent = () => {
             tooltip={{ position: "left", openDelay: 2000 }}
             icon={faBell}
             size="lg"
-            loading={Boolean(
-              jobs?.filter((job) => job.status === "running").length,
-            )}
+            // loading={Boolean(
+            //   jobs?.filter((job) => job.status === "running").length,
+            // )}
             onClick={openNotifications}
           ></Action>
           <Menu>
@@ -204,6 +205,23 @@ const AppHeader: FunctionComponent = () => {
                                     />
                                   </Badge>
                                 </Grid.Col>
+                                {job?.is_progress && (
+                                  <Grid.Col span={12}>
+                                    <Progress
+                                      value={
+                                        (job.progress_value /
+                                          job.progress_max) *
+                                        100
+                                      }
+                                      size="sm"
+                                      radius="sm"
+                                    />
+                                    <Text>
+                                      {job.progress_message}{" "}
+                                      {job.progress_value}/{job.progress_max}
+                                    </Text>
+                                  </Grid.Col>
+                                )}
                               </Grid>
                             </Card>
                           ))}
