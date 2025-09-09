@@ -166,6 +166,15 @@ class JobsQueue:
             return sorted([vars(job) for job in queues], key=lambda x: x['last_run_time'], reverse=True)
     
     def get_job_status(self, job_id: int):
+        """
+        Retrieves the status of a job by its ID from a queue. If the job exists and has a
+        status field, it returns its value. Otherwise, it returns "Unknown job".
+
+        :param job_id: ID of the job to retrieve status for
+        :type job_id: int
+        :return: The status of the job if available, otherwise "Unknown job"
+        :rtype: str
+        """
         job = self.list_jobs_from_queue(job_id=job_id)
         if job and 'status' in job[0]:
             return job[0]['status']
