@@ -1,4 +1,5 @@
 import { cleanNotifications, showNotification } from "@mantine/notifications";
+import { isArray, isEmpty, isNumber } from "lodash";
 import queryClient from "@/apis/queries";
 import { QueryKeys } from "@/apis/queries/keys";
 import api from "@/apis/raw";
@@ -217,29 +218,24 @@ export function createDefaultReducer(): SocketIO.Reducer[] {
     {
       key: "jobs",
       update: (items) => {
+        const keys = [QueryKeys.System, QueryKeys.Jobs];
+
         items.forEach((payload) => {
           // Payload is always a JSON string: {"job_id": <number>, "job_value": <number|null>}
           // If job_value is present (not null/undefined), apply directly to cache without API call
-          if (payload.job_value !== null && payload.job_value !== undefined) {
-            const key = [QueryKeys.System, QueryKeys.Jobs] as const;
-            const current = queryClient.getQueryData<LooseObject[]>(key) || [];
+          if (isNumber(payload.job_value)) {
+            const current = queryClient.getQueryData<LooseObject[]>(keys) || [];
             const idx = current.findIndex((j) => j.job_id === payload.job_id);
 
-            let updatedJob: LooseObject =
-              // eslint-disable-next-line camelcase
+            // eslint-disable-next-line camelcase
+            const initialJob =
               idx >= 0 ? { ...current[idx] } : { job_id: payload.job_id };
 
-            if (payload.job_value && typeof payload.job_value === "object") {
-              // Merge provided fields directly (expected to include progress fields)
-              updatedJob = {
-                ...updatedJob,
-                ...(payload.job_value as LooseObject),
-              };
-            } else {
-              // Fallback: treat primitive as progress_value
-              // eslint-disable-next-line camelcase
-              updatedJob = { ...updatedJob, progress_value: payload.job_value };
-            }
+            // eslint-disable-next-line camelcase
+            const updatedJob = {
+              ...initialJob,
+              progress_value: payload.job_value,
+            };
 
             const next =
               idx >= 0
@@ -250,7 +246,7 @@ export function createDefaultReducer(): SocketIO.Reducer[] {
                   ]
                 : [...current, updatedJob];
 
-            queryClient.setQueryData(key, next);
+            queryClient.setQueryData(keys, next);
             LOG("info", "Applied inline job_value to cache", payload.job_id);
             return;
           }
@@ -264,15 +260,14 @@ export function createDefaultReducer(): SocketIO.Reducer[] {
           void api.system
             .jobs(payload.job_id)
             .then((resp: LooseObject[] | undefined) => {
-              const incomingJobs = Array.isArray(resp) ? resp : [];
-              if (incomingJobs.length === 0) {
+              const incomingJobs = isArray(resp) ? resp : [];
+              if (isEmpty(incomingJobs)) {
                 return;
               }
               const incoming = incomingJobs[0];
 
-              const key = [QueryKeys.System, QueryKeys.Jobs] as const;
               const current =
-                queryClient.getQueryData<LooseObject[]>(key) || [];
+                queryClient.getQueryData<LooseObject[]>(keys) || [];
 
               const idx = current.findIndex(
                 (j) => j.job_id === incoming.job_id,
@@ -286,7 +281,7 @@ export function createDefaultReducer(): SocketIO.Reducer[] {
                     ]
                   : [...current, incoming];
 
-              queryClient.setQueryData(key, next);
+              queryClient.setQueryData(keys, next);
             })
             .catch((e: unknown) => {
               LOG("warning", "Failed to fetch job update", payload.job_id, e);
