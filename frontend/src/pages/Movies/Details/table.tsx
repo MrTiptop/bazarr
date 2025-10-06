@@ -68,6 +68,7 @@ const Table: FunctionComponent<Props> = ({ movie, profile, disabled }) => {
           label="Search Subtitle"
           icon={faSearch}
           disabled={disabled}
+          loading={download.isPending}
           onClick={() => {
             task.create(
               movie.title,
