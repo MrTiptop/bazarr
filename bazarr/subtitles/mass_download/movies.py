@@ -21,8 +21,8 @@ from app.event_handler import event_stream
 from ..download import generate_subtitles
 
 
-def movies_download_subtitles(no, job_id=None):
-    if not job_id:
+def movies_download_subtitles(no, job_id=None, job_sub_function=False):
+    if not job_sub_function and not job_id:
         jobs_queue.add_progress_job_from_function("Searching missing subtitles")
         return
 

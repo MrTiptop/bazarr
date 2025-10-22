@@ -333,24 +333,70 @@ def dispatcher(data):
         return
 
 
-def feed_queue(data):
-    # check if event is duplicate from the previous one
-    global last_event_data
-    if data == last_event_data:
-        return
-    else:
-        last_event_data = data
+def filter_nested_dict(data: dict) -> dict:
+    """
+    Filters out specific keys from a nested dictionary structure, including any
+    nested dictionaries or lists that may contain dictionaries.
 
+    The function recursively processes the input dictionary to remove any key-value
+    pairs where the key matches the specified keys to exclude. For lists, it will
+    iterate through the items and apply the same filtering logic if the item is a
+    dictionary.
+
+    :param data: A dictionary that may contain nested dictionaries or lists. Values
+                 that are dictionaries will be recursively filtered, and lists
+                 within the dictionary will be traversed to check for and filter
+                 nested dictionaries within them.
+    :type data: dict
+    :return: A dictionary where specified keys are removed, including from any
+             nested dictionaries or dictionaries within lists.
+    :rtype: dict
+    """
+    keys_to_remove = ['statistics']
+
+    filtered_data = {}
+
+    for key, value in data.items():
+        if key not in keys_to_remove:
+            if isinstance(value, dict):
+                # Recursively filter nested dictionaries
+                filtered_data[key] = filter_nested_dict(value)
+            elif isinstance(value, list):
+                # Handle lists that might contain dictionaries
+                filtered_data[key] = [
+                    filter_nested_dict(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
+            else:
+                # Keep the value as is
+                filtered_data[key] = value
+
+    return filtered_data
+
+
+def feed_queue(data):
     # some sonarr version sends events as a list of a single dict, we make it a dict
     if isinstance(data, list) and len(data):
         data = data[0]
 
-    # if data is a dict and contain an event for series, episode or movie, we add it to the event queue
-    if isinstance(data, dict) and 'name' in data:
-        if data['name'] in ['series', 'episode']:
-            sonarr_queue.append(data)
-        elif data['name'] == 'movie':
-            radarr_queue.append(data)
+    if isinstance(data, dict) and 'name' in data and data['name'] in ['series', 'episode', 'movie']:
+        # filter out some keys to reduce the size of the event data dictionary and prevent similar events from being
+        # added to the queue
+        data = filter_nested_dict(data)
+
+        # check if event is duplicate from the previous one
+        global last_event_data
+        if data == last_event_data:
+            return
+        else:
+            last_event_data = data
+
+        # if data is a dict and contain an event for series, episode or movie, we add it to the event queue
+        if isinstance(data, dict) and 'name' in data:
+            if data['name'] in ['series', 'episode']:
+                sonarr_queue.append(data)
+            elif data['name'] == 'movie':
+                radarr_queue.append(data)
 
 
 def consume_queue(queue):
