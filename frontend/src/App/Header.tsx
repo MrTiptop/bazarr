@@ -15,15 +15,21 @@ import {
   Progress,
   Stack,
   Text,
+  Title,
   Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { faBell } from "@fortawesome/free-regular-svg-icons/faBell";
 import {
   faArrowRotateLeft,
+  faCheck,
+  faClock,
   faGear,
   faPowerOff,
+  faQuestion,
+  faSpinner,
   faTrash,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useSystem, useSystemJobs, useSystemSettings } from "@/apis/hooks";
@@ -34,6 +40,7 @@ import { Environment, useGotoHomepage } from "@/utilities";
 import styles from "./Header.module.scss";
 import Jobs = System.Jobs;
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { startCase } from "lodash";
 import { QueryKeys } from "@/apis/queries/keys";
 import api from "@/apis/raw";
 
@@ -184,15 +191,25 @@ const AppHeader: FunctionComponent = () => {
                   return order
                     .filter((status) => grouped[status as string]?.length)
                     .map((status) => (
-                      <Stack key={status} gap="xs">
+                      <Stack key={status} mt="md">
                         <Group justify="space-between" wrap="nowrap">
-                          <Badge
-                            variant={status === "running" ? "filled" : "light"}
-                            radius="sm"
-                            size="md"
-                          >
-                            {status}
-                          </Badge>
+                          <Group gap="xs">
+                            <FontAwesomeIcon
+                              icon={
+                                status === "running"
+                                  ? faSpinner
+                                  : status === "pending"
+                                    ? faClock
+                                    : status === "failed"
+                                      ? faXmark
+                                      : status === "completed"
+                                        ? faCheck
+                                        : faQuestion
+                              }
+                              spin={status === "running"}
+                            />
+                            <Title order={2}>{startCase(status)}</Title>
+                          </Group>
                           <Text size="xs" c="dimmed">
                             {grouped[status as string].length} job
                             {grouped[status as string].length > 1 ? "s" : ""}
