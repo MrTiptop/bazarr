@@ -188,7 +188,7 @@ const NotificationDrawer: FunctionComponent<NotificationDrawerProps> = ({
                                                     job.progress_max) *
                                                   100
                                                 : 0,
-                                            color: "blue",
+                                            color: "brand",
                                           },
                                         ]}
                                         label={
