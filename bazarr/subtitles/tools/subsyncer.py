@@ -4,9 +4,9 @@ import logging
 import os
 import threading
 import time
-import sys
 
 from ffsubsync.ffsubsync import run, make_parser
+from tqdm import tqdm
 
 from utilities.binaries import get_binary
 from radarr.history import history_log_movie
@@ -42,10 +42,9 @@ class SubSyncer:
     def _capture_tqdm_instance():
         """Capture the tqdm instance from ffsubsync's VideoSpeechTransformer."""
         try:
-            import tqdm as tqdm_module
             # Get all active tqdm instances
-            if hasattr(tqdm_module.tqdm, '_instances'):
-                instances = list(tqdm_module.tqdm._instances)
+            if hasattr(tqdm, '_instances'):
+                instances = list(tqdm._instances)
                 if instances:
                     # Return the most recent instance
                     return instances[-1]
@@ -135,9 +134,6 @@ class SubSyncer:
             unparsed_args = [self.reference, '-i', self.srtin, '-o', self.srtout, '--ffmpegpath', self.ffmpeg_path,
                              '--vad', self.vad, '--log-dir-path', self.log_dir_path, '--max-offset-seconds',
                              max_offset_seconds, '--output-encoding', 'same']
-            if not settings.general.utf8_encode:
-                unparsed_args.append('--output-encoding')
-                unparsed_args.append('same')
 
             if no_fix_framerate:
                 unparsed_args.append('--no-fix-framerate')
@@ -168,7 +164,7 @@ class SubSyncer:
                 logging.debug('BAZARR deleted the previous subtitles synchronization attempt file.')
 
             # Start sync in a separate thread
-            sync_thread = threading.Thread(target=self._run_sync_in_thread, daemon=True)
+            sync_thread = threading.Thread(target=self._run_sync_in_thread, daemon=False)
             sync_thread.start()
 
             # Start progress monitoring if callback provided
@@ -178,13 +174,13 @@ class SubSyncer:
                 monitor_thread = threading.Thread(
                     target=self._monitor_tqdm_progress,
                     args=(job_id,),
-                    daemon=True
+                    daemon=False
                 )
                 monitor_thread.start()
 
                 # Wait for both threads to complete
                 sync_thread.join()
-                monitor_thread.join(timeout=2)  # Give monitor thread 2 seconds to finish
+                monitor_thread.join()
             else:
                 # Just wait for sync to complete
                 sync_thread.join()
