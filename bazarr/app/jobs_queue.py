@@ -290,7 +290,7 @@ class JobsQueue:
         :return: Dictionary containing the payload for the event stream.
         :rtype: dict
         """
-        payload = {"job_id": job.job_id}
+        payload = {"job_id": job.job_id, "status": job.status}
         progress_max_updated = False
 
         if progress_value:

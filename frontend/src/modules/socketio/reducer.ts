@@ -229,6 +229,7 @@ export function createDefaultReducer(): SocketIO.Reducer[] {
 
             const updatedJob = {
               ...initialJob,
+              status: payload.status,
               // eslint-disable-next-line camelcase
               progress_value: payload.job_value,
               // eslint-disable-next-line camelcase

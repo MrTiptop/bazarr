@@ -32,8 +32,6 @@ def sync_subtitles(video_path,
         jobs_queue.add_progress_job_from_function("Syncing Subtitle")
         return False
 
-    jobs_queue.update_job_progress(job_id=job_id, progress_message=f"Syncing {srt_path}")
-
     if forced:
         logging.debug('BAZARR cannot sync forced subtitles. Skipping sync routine.')
     else:
@@ -63,7 +61,8 @@ def sync_subtitles(video_path,
                 'radarr_id': radarr_id,
                 'progress_callback': lambda x: jobs_queue.update_job_progress(job_id=x['job_id'],
                                                                               progress_value=x['value'],
-                                                                              progress_max=x['count']),
+                                                                              progress_max=x['count'],
+                                                                              progress_message=f"Syncing {srt_path}"),
                 'job_id': job_id,
             }
             try:

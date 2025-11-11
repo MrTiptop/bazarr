@@ -12,6 +12,7 @@ declare namespace Manager {
     job_id: number;
     job_value: number;
     job_message: string;
+    status: string;
   }
 }
 
